@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flexbox 딥다이브 — 라이브 데모</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c26;
+    --surface-2: #1f2432;
+    --border: #2c3344;
+    --text: #e8ecf4;
+    --text-dim: #9aa3b5;
+    --accent: #5b8cff;
+    --accent-soft: rgba(91, 140, 255, 0.16);
+    --green: #3ecf8e;
+    --yellow: #f5c451;
+    --red: #ff6b6b;
+    --item-1: #5b8cff;
+    --item-2: #9b6bff;
+    --item-3: #3ecf8e;
+    --item-4: #f5a451;
+    --radius: 10px;
+    font-size: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+    line-height: 1.6;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 48px 24px 120px; }
+
+  header.hero { text-align: center; padding: 64px 0 24px; }
+  header.hero h1 { font-size: 2.4rem; letter-spacing: -0.02em; }
+  header.hero h1 em { color: var(--accent); font-style: normal; }
+  header.hero p { color: var(--text-dim); margin-top: 8px; }
+
+  nav.toc {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    margin: 24px 0 8px;
+  }
+  nav.toc a {
+    color: var(--text-dim); text-decoration: none; font-size: 0.82rem;
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+    transition: all .15s;
+  }
+  nav.toc a:hover { color: var(--text); border-color: var(--accent); }
+
+  section { margin-top: 72px; scroll-margin-top: 24px; }
+  section > h2 {
+    font-size: 1.5rem; letter-spacing: -0.01em; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  section > h2 .no {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; flex-shrink: 0;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 8px; font-size: 0.95rem;
+  }
+  section > p.desc { color: var(--text-dim); margin-bottom: 20px; font-size: 0.95rem; }
+  section > p.desc code, td code, li code {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; font-size: 0.85em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+
+  /* ---- control buttons ---- */
+  .controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  .control-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .control-row .label {
+    width: 150px; flex-shrink: 0; color: var(--text-dim);
+    font-size: 0.82rem; font-family: "JetBrains Mono", Menlo, monospace;
+  }
+  .btn {
+    background: var(--surface-2); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 12px; font-size: 0.82rem; cursor: pointer;
+    font-family: "JetBrains Mono", Menlo, monospace;
+    transition: all .12s;
+  }
+  .btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .btn.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+  /* ---- demo stage ---- */
+  .stage {
+    background: var(--bg); border: 1px dashed var(--border);
+    border-radius: var(--radius); position: relative; overflow: hidden;
+  }
+  .stage::after {
+    content: attr(data-label); position: absolute; top: 8px; right: 12px;
+    font-size: 0.7rem; color: var(--text-dim); opacity: 0.7;
+    font-family: Menlo, monospace; pointer-events: none;
+  }
+  .resizable {
+    resize: horizontal; overflow: auto; min-width: 220px; max-width: 100%;
+    border-right: 3px solid var(--accent);
+  }
+  .resize-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 8px; }
+  .resize-hint::before { content: "↔ "; color: var(--accent); }
+
+  .flex-demo { display: flex; padding: 16px; min-height: 140px; }
+
+  .item {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 48px; padding: 10px 18px;
+    border-radius: 8px; font-weight: 700; font-size: 1rem;
+    color: #0c0e14;
+  }
+  .item:nth-child(1) { background: var(--item-1); }
+  .item:nth-child(2) { background: var(--item-2); }
+  .item:nth-child(3) { background: var(--item-3); }
+  .item:nth-child(4) { background: var(--item-4); }
+  .item .sub { font-size: 0.65rem; font-weight: 500; opacity: 0.75; margin-left: 6px; }
+
+  pre.code {
+    background: #0b0d12; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; margin-top: 16px; overflow-x: auto;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+    font-size: 0.82rem; line-height: 1.7; color: #c7d0e0;
+  }
+  pre.code .prop { color: #7fb2ff; }
+  pre.code .val { color: #3ecf8e; }
+  pre.code .comment { color: #5c6577; }
+
+  .callout {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-left: 3px solid var(--yellow);
+    border-radius: 8px; padding: 12px 16px; margin-top: 16px;
+    font-size: 0.88rem; color: var(--text-dim);
+  }
+  .callout.red { border-left-color: var(--red); }
+  .callout.blue { border-left-color: var(--accent); }
+  .callout strong { color: var(--text); }
+
+  .compare { display: flex; gap: 16px; flex-wrap: wrap; }
+  .compare > div { flex: 1 1 300px; min-width: 0; }
+  .compare h3 {
+    font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px;
+    font-family: Menlo, monospace; font-weight: 500;
+  }
+
+  /* ===== 3. grow demo ===== */
+  #growDemo .item { transition: flex-grow .25s; }
+  #adjustDemo .item { flex: 0 0 120px; min-width: 0; overflow: hidden; }
+  #adjustDemo.active .item { flex: 1 1 120px; }
+  #clampDemo .item { min-width: 0; overflow: hidden; }
+  #clampDemo.capped .item:first-child { max-width: 140px; }
+  .grow-controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .grow-ctl { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+  .grow-ctl .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .grow-ctl select {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; font-family: Menlo, monospace;
+  }
+
+  /* ===== 1b. grandchild demo ===== */
+  .gc-wrapper {
+    position: relative;
+    border: 2px dashed var(--yellow); border-radius: 10px;
+    padding: 20px 6px 6px;
+  }
+  .gc-wrapper::before {
+    content: "wrapper (display: block)";
+    position: absolute; top: 3px; left: 8px;
+    font-size: 0.62rem; color: var(--yellow);
+    font-family: Menlo, monospace; white-space: nowrap;
+  }
+  .gc-wrapper .item { flex: 1; min-width: 0; }
+  #gcDemo.fixed .gc-wrapper { display: flex; gap: 6px; flex: 1; }
+  #gcDemo.fixed .gc-wrapper::before { content: "wrapper (display: flex · flex: 1)"; }
+
+  /* ===== 4b. flex shorthand keywords ===== */
+  .kw-row { display: flex; align-items: center; gap: 10px; }
+  .kw-label {
+    flex: none; width: 96px; font-family: Menlo, monospace;
+    font-size: 0.72rem; color: var(--text); line-height: 1.35;
+  }
+  .kw-label em { color: var(--accent); font-style: normal; display: block; font-size: 0.65rem; }
+  .kw-demo { flex: 1; min-width: 0; display: flex; gap: 6px; }
+  .kw-demo .item {
+    min-height: 40px; padding: 6px 12px; font-size: 0.78rem;
+    white-space: nowrap; min-width: 0; overflow: hidden;
+  }
+  .kw-initial .item { flex: initial; }
+  .kw-auto    .item { flex: auto; }
+  .kw-none    .item { flex: none; min-width: auto; overflow: visible; }
+  .kw-one     .item { flex: 1; }
+
+  /* ===== 6b. column scroll trap ===== */
+  .scroll-vp {
+    height: 240px; border: 1px solid var(--border); border-radius: 8px;
+    display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+  }
+  .scroll-vp .sv-bar {
+    flex: none; padding: 8px 14px; font-size: 0.75rem;
+    background: var(--surface-2); color: var(--text-dim);
+  }
+  .scroll-vp .sv-bar.footer-bar { background: var(--accent-soft); color: var(--accent); }
+  .scroll-outer { flex: 1; }
+  .scroll-vp.fixed .scroll-outer { min-height: 0; }
+  .scroll-inner { height: 100%; overflow-y: auto; padding: 10px 14px; font-size: 0.78rem; color: var(--text-dim); }
+  .scroll-inner p { margin-bottom: 8px; }
+
+  /* ===== 5. shrink demo ===== */
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%; flex-shrink: 1;
+    background: linear-gradient(135deg, var(--item-2), var(--item-1));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+  }
+  .shrink-fixed .avatar { flex-shrink: 0; }
+  .chat-text { background: var(--surface-2); border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; }
+
+  /* ===== 6. min-width trap ===== */
+  .trap-row { display: flex; align-items: center; gap: 10px; padding: 14px; }
+  .trap-label {
+    flex-shrink: 0; background: var(--item-3); color: #0c0e14;
+    border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700;
+  }
+  .trap-cell { background: var(--surface-2); border-radius: 6px; padding: 8px 12px; }
+  .trap-value {
+    display: block; font-size: 0.85rem; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .trap-row.fixed .trap-cell { min-width: 0 }
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 0.88rem; }
+  .toggle-wrap input { accent-color: var(--accent); width: 18px; height: 18px; }
+
+  /* ===== 6c. percentage height chain ===== */
+  .vp-sim {
+    height: 230px; border: 1px dashed var(--border); border-radius: 8px;
+    padding: 24px 6px 6px; position: relative;
+  }
+  .vp-sim::before {
+    content: "브라우저 뷰포트 (높이 확정)"; position: absolute; top: 4px; left: 8px;
+    font-size: 0.62rem; color: var(--text-dim); font-family: Menlo, monospace;
+  }
+  .sim-body {
+    border: 1px dashed var(--yellow); border-radius: 6px;
+    padding: 22px 6px 6px; position: relative;
+  }
+  .sim-body::before {
+    content: attr(data-label); position: absolute; top: 3px; left: 8px;
+    font-size: 0.62rem; color: var(--yellow); font-family: Menlo, monospace; white-space: nowrap;
+  }
+  .sim-view {
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 6px;
+    padding: 22px 6px 6px; position: relative;
+    display: flex; flex-direction: column;
+  }
+  .sim-view::before {
+    content: attr(data-label); position: absolute; top: 3px; left: 8px;
+    font-size: 0.62rem; color: var(--accent); font-family: Menlo, monospace; white-space: nowrap;
+  }
+  .sim-header {
+    background: var(--item-1); color: #0c0e14;
+    font-size: 0.72rem; font-weight: 700; padding: 6px 10px; border-radius: 4px;
+  }
+
+  /* ===== 7. margin auto ===== */
+  .nav-demo {
+    display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+    background: var(--surface-2); border-radius: 8px; font-size: 0.85rem;
+  }
+  .nav-demo .logo { font-weight: 800; color: var(--accent); }
+  .nav-demo a { color: var(--text-dim); text-decoration: none; }
+  .nav-demo.pushed .push { margin-left: auto; }
+  .nav-demo .cta {
+    background: var(--accent); color: #0c0e14; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px;
+  }
+
+  /* ===== 8. order/reverse a11y ===== */
+  .a11y-demo { display: flex; gap: 10px; padding: 16px; }
+  .a11y-demo.reversed { flex-direction: row-reverse; }
+  .a11y-demo.ordered .a11y-btn:first-child { order: 99; }
+  .a11y-btn {
+    border: none; cursor: pointer;
+    min-height: 56px; padding: 12px 24px; border-radius: 8px;
+    font-weight: 700; font-size: 1.05rem; color: #0c0e14;
+    font-family: inherit;
+  }
+  .a11y-btn:nth-child(1) { background: var(--item-1); }
+  .a11y-btn:nth-child(2) { background: var(--item-2); }
+  .a11y-btn:nth-child(3) { background: var(--item-3); }
+  .a11y-btn:nth-child(4) { background: var(--item-4); }
+  .a11y-btn:focus-visible, .a11y-btn:focus {
+    outline: 3px solid var(--red); outline-offset: 3px;
+  }
+  .focus-log {
+    font-family: "JetBrains Mono", Menlo, monospace; font-size: 0.82rem;
+    color: var(--text); margin-top: 14px; min-height: 1.6em;
+  }
+  .focus-log .seq { color: var(--red); font-weight: 700; }
+
+  /* ===== 8. patterns ===== */
+  .mini-viewport {
+    height: 260px; border: 1px solid var(--border); border-radius: 8px;
+    display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+  }
+  .mini-viewport .mv-header, .mini-viewport .mv-footer {
+    flex: none; padding: 10px 16px; font-size: 0.78rem;
+    background: var(--surface-2); color: var(--text-dim);
+  }
+  .mini-viewport .mv-main { flex: 1; padding: 14px 16px; font-size: 0.8rem; color: var(--text-dim); overflow: auto; }
+
+  .cards-demo { display: flex; flex-wrap: wrap; gap: 12px; padding: 14px; }
+  .cards-demo .card {
+    flex: 1 1 160px; min-height: 80px; border-radius: 8px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.82rem; color: var(--text-dim);
+  }
+
+  .sidebar-demo { display: flex; height: 170px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .sidebar-demo .sb { flex: none; width: 130px; background: var(--surface-2); padding: 12px; font-size: 0.78rem; color: var(--text-dim); }
+  .sidebar-demo .ct { flex: 1; min-width: 0; padding: 12px; font-size: 0.78rem; color: var(--text-dim); }
+
+  footer { text-align: center; color: var(--text-dim); font-size: 0.8rem; margin-top: 96px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <h1>Flexbox <em>딥다이브</em></h1>
+    <p>버튼을 눌러 직접 바꿔 보면서 설명하는 라이브 데모</p>
+    <nav class="toc">
+      <a href="#axis">1. 축</a>
+      <a href="#wrap">2. wrap</a>
+      <a href="#grow">3. grow·basis</a>
+      <a href="#flex1">4. flex 단축형</a>
+      <a href="#shrink">5. shrink</a>
+      <a href="#minw">6. min-w·스크롤 함정</a>
+      <a href="#mauto">7. margin:auto</a>
+      <a href="#a11y">8. order·reverse 접근성</a>
+      <a href="#patterns">9. 패턴</a>
+    </nav>
+  </header>
+
+  <!-- ============ 1. AXIS PLAYGROUND ============ -->
+  <section id="axis">
+    <h2><span class="no">1</span>축 플레이그라운드 — justify는 주축, align은 교차축</h2>
+    <p class="desc"><code>flex-direction</code>을 column으로 바꾸면 <code>justify-content</code>가 세로 방향으로 동작하는 것을 확인.</p>
+    <div class="panel">
+      <div class="controls" id="axisControls">
+        <div class="control-row" data-prop="flexDirection">
+          <span class="label">flex-direction</span>
+          <button class="btn active" data-val="row">row</button>
+          <button class="btn" data-val="column">column</button>
+          <button class="btn" data-val="row-reverse">row-reverse</button>
+          <button class="btn" data-val="column-reverse">column-reverse</button>
+        </div>
+        <div class="control-row" data-prop="justifyContent">
+          <span class="label">justify-content</span>
+          <button class="btn active" data-val="flex-start">flex-start</button>
+          <button class="btn" data-val="center">center</button>
+          <button class="btn" data-val="flex-end">flex-end</button>
+          <button class="btn" data-val="space-between">space-between</button>
+          <button class="btn" data-val="space-around">space-around</button>
+          <button class="btn" data-val="space-evenly">space-evenly</button>
+        </div>
+        <div class="control-row" data-prop="alignItems">
+          <span class="label">align-items</span>
+          <button class="btn active" data-val="stretch">stretch</button>
+          <button class="btn" data-val="flex-start">flex-start</button>
+          <button class="btn" data-val="center">center</button>
+          <button class="btn" data-val="flex-end">flex-end</button>
+          <button class="btn" data-val="baseline">baseline</button>
+        </div>
+        <div class="control-row" data-prop="gap">
+          <span class="label">gap</span>
+          <button class="btn active" data-val="8px">8px</button>
+          <button class="btn" data-val="0px">0</button>
+          <button class="btn" data-val="24px">24px</button>
+        </div>
+      </div>
+      <div class="stage" data-label="container">
+        <div class="flex-demo" id="axisDemo" style="min-height: 220px; gap: 8px;">
+          <div class="item">1</div>
+          <div class="item" style="font-size: 1.5rem;">2<span class="sub">큰 글자</span></div>
+          <div class="item">3</div>
+        </div>
+      </div>
+      <pre class="code" id="axisCode"></pre>
+      <div class="callout blue">💡 <span><strong>align-items 기본값은 stretch.</strong> 교차축 크기를 안 준 아이템이 컨테이너를 꽉 채우는 이유. baseline을 누르면 글자 크기가 다른 2번 아이템과 글자 밑선이 맞춰지는 것도 확인.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">flex item은 직계 자식만 — 손자에게는 효력이 없다</h3>
+      <div class="compare">
+        <div>
+          <h3>직계 자식 — flex: 1 전부 적용</h3>
+          <div class="stage" data-label="container">
+            <div class="flex-demo" style="gap: 6px; min-height: 130px;">
+              <div class="item" style="flex: 1; min-width: 0;">A<span class="sub">flex: 1</span></div>
+              <div class="item" style="flex: 1; min-width: 0;">B<span class="sub">flex: 1</span></div>
+              <div class="item" style="flex: 1; min-width: 0;">C<span class="sub">flex: 1</span></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>중간에 래퍼 — B·C의 flex: 1 무시</h3>
+          <div class="stage" data-label="container">
+            <div class="flex-demo" id="gcDemo" style="gap: 6px; min-height: 130px;">
+              <div class="item" style="flex: 1; min-width: 0;">A<span class="sub">flex: 1</span></div>
+              <div class="gc-wrapper">
+                <div class="item">B<span class="sub">flex: 1</span></div>
+                <div class="item">C<span class="sub">flex: 1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="toggle-wrap" style="margin: 14px 0 0;">
+        <input type="checkbox" id="gcToggle" />
+        <label for="gcToggle">래퍼에 <code>display: flex; flex: 1</code> 적용 (중첩 flex로 해결)</label>
+      </div>
+      <div class="callout">⚠️ <span>컨테이너가 보는 것은 <strong>직계 자식(A와 래퍼)뿐</strong>이다. 래퍼가 block인 동안 손자 B·C의 <code>flex: 1</code>은 완전히 무시되어 세로로 쌓인다. 해결은 래퍼를 <strong>중첩 flex 컨테이너</strong>로 만들고 래퍼 자신에게 flex 아이템 속성을 주는 것 — 바깥 분배는 래퍼가 받고, 안쪽 분배는 래퍼가 다시 해 준다.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">stretch는 교차축 크기가 auto인 아이템만 늘린다</h3>
+      <div class="stage" data-label="align-items: stretch (기본값)">
+        <div class="flex-demo" style="height: 170px; gap: 10px;">
+          <div class="item" style="flex: 1; min-width: 0;">1<span class="sub">height: auto → 꽉 참</span></div>
+          <div class="item" style="flex: 1; min-width: 0; height: 56px;">2<span class="sub">height: 56px → 그대로</span></div>
+          <div class="item" style="flex: 1; min-width: 0; max-height: 90px;">3<span class="sub">max-height: 90px → 거기서 멈춤</span></div>
+        </div>
+      </div>
+      <div class="callout blue">💡 <span>stretch는 강제가 아니라 <strong>"교차축 크기가 auto일 때의 기본 동작"</strong>이다. 명시적 <code>height</code>가 있으면 건드리지 않고, <code>max-height</code>는 stretch의 상한으로 작동한다.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">img가 flex item이면 — stretch가 비율을 깨뜨린다</h3>
+      <div class="compare">
+        <div>
+          <h3>① img 직접 flex item — 비율 깨짐</h3>
+          <div class="stage" data-label="stretch">
+            <div class="flex-demo" style="height: 170px; gap: 10px;">
+              <img class="face" style="width: 90px;" alt="stretch로 세로로 늘어난 이미지" />
+              <div class="item" style="flex: 1; min-width: 0; font-size: 0.75rem;">img의 height가 auto라 stretch 대상이 되고, width는 90px 고정이라 세로로만 늘어난다</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>② align-self: flex-start</h3>
+          <div class="stage" data-label="fix 1">
+            <div class="flex-demo" style="height: 170px; gap: 10px;">
+              <img class="face" style="width: 90px; align-self: flex-start;" alt="원래 비율을 유지한 이미지" />
+              <div class="item" style="flex: 1; min-width: 0; font-size: 0.75rem;">stretch 대상에서 빠져 고유 비율(1:1)로 돌아온다</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>③ 래퍼로 감싸기</h3>
+          <div class="stage" data-label="fix 2">
+            <div class="flex-demo" style="height: 170px; gap: 10px;">
+              <div class="gc-wrapper">
+                <img class="face" style="width: 90px;" alt="래퍼 안에서 비율을 유지한 이미지" />
+              </div>
+              <div class="item" style="flex: 1; min-width: 0; font-size: 0.75rem;">stretch는 래퍼(div)가 대신 받고, 안의 img는 일반 흐름이라 비율 유지</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout">⚠️ <span>①에서 원이 타원이 되는 이유: img의 교차축 크기(height)는 auto → stretch로 컨테이너 높이까지 늘어나는데, 주축 크기(width: 90px)는 고정이라 비율이 깨진다. 수정은 <code>align-self: flex-start</code>(②), 래퍼로 감싸기(③), 또는 이미지에 <code>object-fit: cover/contain</code>이나 <code>aspect-ratio</code>를 명시하는 방법도 있다.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 2. WRAP ============ -->
+  <section id="wrap">
+    <h2><span class="no">2</span>flex-wrap — 기본값은 nowrap</h2>
+    <p class="desc">오른쪽 파란 모서리를 잡고 컨테이너 너비를 줄여볼 것. <code>nowrap</code>은 아이템을 찌그러뜨리고, <code>wrap</code>은 줄을 바꾼다.</p>
+    <div class="panel">
+      <div class="controls">
+        <div class="control-row" data-prop="flexWrap" id="wrapControls">
+          <span class="label">flex-wrap</span>
+          <button class="btn active" data-val="nowrap">nowrap (기본값)</button>
+          <button class="btn" data-val="wrap">wrap</button>
+        </div>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="flex-demo" id="wrapDemo" style="gap: 8px;">
+          <div class="item">Alpha</div>
+          <div class="item">Bravo</div>
+          <div class="item">Charlie</div>
+          <div class="item">Delta</div>
+        </div>
+      </div>
+      <p class="resize-hint">컨테이너 오른쪽 가장자리를 드래그해서 너비를 조절하세요</p>
+    </div>
+  </section>
+
+  <!-- ============ 3. GROW + BASIS ============ -->
+  <section id="grow">
+    <h2><span class="no">3</span>flex-grow × flex-basis — 남는 공간의 분배</h2>
+    <p class="desc">grow는 아이템 너비의 배수가 아니다. <strong>basis 합을 뺀 남는 공간(free space)</strong>을 grow 비율로 나눠 basis 위에 얹는다. 값을 바꾸거나 컨테이너를 리사이즈하면 아래 계산이 실시간으로 갱신된다.</p>
+    <div class="panel">
+      <div class="grow-controls" id="growControls">
+        <label class="grow-ctl"><span class="dot" style="background: var(--item-1)"></span>A grow:
+          <select data-idx="0" data-prop="grow"><option>0</option><option selected>1</option><option>2</option><option>3</option></select>
+          · basis:
+          <select data-idx="0" data-prop="basis"><option>0</option><option>60</option><option selected>100</option><option>150</option><option>200</option></select>px
+        </label>
+        <label class="grow-ctl"><span class="dot" style="background: var(--item-2)"></span>B grow:
+          <select data-idx="1" data-prop="grow"><option>0</option><option>1</option><option selected>2</option><option>3</option></select>
+          · basis:
+          <select data-idx="1" data-prop="basis"><option>0</option><option>60</option><option>100</option><option>150</option><option selected>200</option></select>px
+        </label>
+        <label class="grow-ctl"><span class="dot" style="background: var(--item-3)"></span>C grow:
+          <select data-idx="2" data-prop="grow"><option selected>0</option><option>1</option><option>2</option><option>3</option></select>
+          · basis:
+          <select data-idx="2" data-prop="basis"><option>0</option><option>60</option><option selected>100</option><option>150</option><option>200</option></select>px
+        </label>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="flex-demo" id="growDemo" style="gap: 8px;">
+          <div class="item" style="min-width: 0; overflow: hidden;">A<span class="sub grow-badge"></span></div>
+          <div class="item" style="min-width: 0; overflow: hidden;">B<span class="sub grow-badge"></span></div>
+          <div class="item" style="min-width: 0; overflow: hidden;">C<span class="sub grow-badge"></span></div>
+        </div>
+      </div>
+      <p class="resize-hint">컨테이너를 좁히거나 넓히면 free space가 바뀌면서 계산이 다시 이뤄진다</p>
+      <pre class="code" id="growCalc"></pre>
+      <div class="callout blue">💡 <span>A=1, B=2여도 B가 A의 2배 너비가 되지 않는다 — <strong>basis 위에 여분 공간의 1/3, 2/3이 얹히는 것</strong>. 전부 같은 너비로 만들려면 basis를 전부 0으로 바꿔 볼 것(= <code>flex: 1</code>, 다음 섹션).</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">basis · width · min/max 상관관계 — 3단계 파이프라인</h3>
+      <pre class="code"><span class="comment">/* 주축 크기가 정해지는 순서 (column이면 width → height로 치환, 나머지 동일) */</span>
+1단계  시작 크기:  <span class="prop">flex-basis</span> → (auto면) <span class="prop">width</span> → (auto면) 콘텐츠 크기
+2단계  조정:       시작 크기 ± <span class="prop">grow</span>/<span class="prop">shrink</span>
+3단계  클램프:     clamp(<span class="prop">min-width</span>, 계산값, <span class="prop">max-width</span>)  <span class="comment">/* ← 항상 이긴다 */</span></pre>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">조합별 결과 사례표 — 컨테이너 600px · 파트너 B는 flex: 1 1 0 + min-w-0 (나머지 흡수)</h3>
+      <pre class="code">A의 선언                                   시작  →  최종    왜
+<span class="prop">flex: none; width: 120px</span>                   120  →  <span class="val">120</span>    basis auto → width 채택, grow/shrink 꺼짐
+<span class="prop">flex: none</span>  (콘텐츠 80px, width 없음)         80  →   <span class="val">80</span>    width도 없으면 콘텐츠 크기
+<span class="prop">flex: 0 0 100px; width: 80px</span>               100  →  <span class="val">100</span>    basis가 width를 이김 (작아도)
+<span class="prop">flex: 0 0 100px; width: 120px</span>              100  →  <span class="val">100</span>    basis가 width를 이김 (커도)
+<span class="prop">flex: 1 1 100px</span>                            100  →  <span class="val">350</span>    100 + free 500 × 1/2 (B와 grow 경쟁)
+<span class="prop">flex: 1 1 0</span>  (+ min-w-0)                      0  →  <span class="val">300</span>    출발선 리셋 → B와 완전 균등
+<span class="prop">flex: 1 1 0</span>  (긴 텍스트 400px, min-w-0 없음)    0  →  <span class="val">400</span>    자동 바닥(min-content)이 계산값 300을 이김 → B는 200으로 양보
+<span class="prop">flex: 1 1 0; max-width: 140px</span>                0  →  <span class="val">140</span>    140에서 동결 → 남은 460은 B가 전부
+<span class="prop">flex: 0 1 0; width: 80px</span> (텍스트 400px)        0  →   <span class="val">80</span>    바닥 = min(min-content 400, width 80) — width가 바닥 공식으로 재등장</pre>
+      <div class="callout blue">💡 <span>모든 행이 같은 파이프라인이다: <strong>1단계가 시작값을 정하고(basis &gt; width &gt; 콘텐츠), 2단계가 조정하고, 3단계 클램프가 최종 결정권</strong>을 갖는다. 5~9행의 차이는 전부 3단계에서 갈린다.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">1단계 — basis가 있으면 width는 무시된다</h3>
+      <div class="stage" data-label="flex-grow: 0 · flex-shrink: 0">
+        <div class="flex-demo" style="gap: 10px; min-height: 100px; align-items: center;">
+          <div class="item" style="flex: none; width: 220px;">A<span class="sub">width: 220px → 220px</span></div>
+          <div class="item" style="flex: 0 0 100px; width: 220px; min-width: 0; overflow: hidden;">B<span class="sub">width: 220 + basis: 100 → 100px</span></div>
+        </div>
+      </div>
+      <div class="callout blue">💡 <span>둘 다 <code>width: 220px</code>인데 B만 100px — <code>flex-basis</code>에 값이 있으면 시작 크기 결정에서 <strong>width는 뒷전</strong>이다. width는 "basis가 auto일 때의 대타"일 뿐. <code>flex: 1</code>(basis 0%)인 아이템에 width를 줘도 안 먹는 이유가 이것.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">2단계 — grow/shrink가 시작 크기를 조정한다</h3>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="adjustToggle" />
+        <label for="adjustToggle">2단계 켜기 — <code>flex: 0 0 120px</code> → <code>flex: 1 1 120px</code></label>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="flex-demo" id="adjustDemo" style="gap: 8px; min-height: 90px;">
+          <div class="item">A<span class="sub adjust-flex"></span><span class="sub adjust-badge"></span></div>
+          <div class="item">B<span class="sub adjust-flex"></span><span class="sub adjust-badge"></span></div>
+        </div>
+      </div>
+      <p class="resize-hint">체크 전에는 1단계의 시작 크기(120px) 그대로 — 남는 공간은 방치되고 모자라면 뚫는다. 체크 후에는 넓히면 grow가, 좁히면 shrink가 시작 크기를 조정한다</p>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">3단계 — max-width는 grow를 동결(freeze)시키고 재분배를 일으킨다</h3>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="clampToggle" />
+        <label for="clampToggle">A에 <code>max-width: 140px</code> 적용</label>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="flex-demo" id="clampDemo" style="gap: 8px; min-height: 90px;">
+          <div class="item" style="flex: 1 1 100px;">A<span class="sub">flex: 1 1 100px</span><span class="sub clamp-badge"></span></div>
+          <div class="item" style="flex: 1 1 100px;">B<span class="sub">flex: 1 1 100px</span><span class="sub clamp-badge"></span></div>
+        </div>
+      </div>
+      <p class="resize-hint">넓혀 보세요 — 체크 전에는 둘이 균등하게 커지지만, 체크 후에는 A가 140px에서 동결되고 A가 못 가져간 몫까지 B가 전부 가져간다</p>
+      <div class="callout">⚠️ <span>grow/shrink가 뭘 계산했든 최종 크기는 <strong>clamp(min-width, 계산값, max-width)</strong>로 잘린다. 클램프에 걸린 아이템은 <strong>동결(freeze)</strong>되고 나머지 아이템들끼리 남은 공간을 재분배한다 — min-width가 shrink의 바닥(6번 섹션)인 것과 정확히 대칭으로, max-width는 grow의 천장이다.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 4. flex:1 vs flex-grow:1 ============ -->
+  <section id="flex1">
+    <h2><span class="no">4</span>flex 단축형 — 1 · initial · auto · none</h2>
+    <p class="desc"><code>flex: 1</code>은 <code>1 1 0%</code>로 풀려서 콘텐츠 크기를 무시하고 균등 분할. <code>flex-grow: 1</code>만 쓰면 basis가 <code>auto</code>라 콘텐츠 크기 위에 여분을 얹는다.</p>
+    <div class="panel">
+      <div class="compare">
+        <div>
+          <h3>flex-grow: 1 (basis: auto)</h3>
+          <div class="stage" data-label="">
+            <div class="flex-demo" style="gap: 8px; min-height: 90px;">
+              <div class="item" style="flex-grow: 1;">짧음</div>
+              <div class="item" style="flex-grow: 1;">콘텐츠가 길면 더 넓게 유지된다</div>
+              <div class="item" style="flex-grow: 1;">중간 길이</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>flex: 1 (basis: 0%)</h3>
+          <div class="stage" data-label="">
+            <div class="flex-demo" style="gap: 8px; min-height: 90px;">
+              <div class="item" style="flex: 1; min-width: 0;">짧음</div>
+              <div class="item" style="flex: 1; min-width: 0;">콘텐츠가 길면 더 넓게 유지된다</div>
+              <div class="item" style="flex: 1; min-width: 0;">중간 길이</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <pre class="code"><span class="comment">/* 단축형이 풀리는 값 — 면접 단골 */</span>
+<span class="prop">flex</span>: <span class="val">initial</span>;  <span class="comment">/* 0 1 auto — 기본값 */</span>
+<span class="prop">flex</span>: <span class="val">1</span>;        <span class="comment">/* 1 1 0%   — 균등 분할 */</span>
+<span class="prop">flex</span>: <span class="val">auto</span>;     <span class="comment">/* 1 1 auto — 콘텐츠 기준 + 여분 분배 */</span>
+<span class="prop">flex</span>: <span class="val">none</span>;     <span class="comment">/* 0 0 auto — 완전 고정 */</span></pre>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">단축형 4종 한눈 비교 — 같은 콘텐츠, 다른 키워드</h3>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px;">
+          <div class="kw-row">
+            <span class="kw-label">initial<em>0 1 auto</em></span>
+            <div class="kw-demo kw-initial">
+              <div class="item">짧음</div>
+              <div class="item">콘텐츠가 긴 아이템입니다</div>
+              <div class="item">중간 길이</div>
+            </div>
+          </div>
+          <div class="kw-row">
+            <span class="kw-label">flex: 1<em>1 1 0%</em></span>
+            <div class="kw-demo kw-one">
+              <div class="item">짧음</div>
+              <div class="item">콘텐츠가 긴 아이템입니다</div>
+              <div class="item">중간 길이</div>
+            </div>
+          </div>
+          <div class="kw-row">
+            <span class="kw-label">auto<em>1 1 auto</em></span>
+            <div class="kw-demo kw-auto">
+              <div class="item">짧음</div>
+              <div class="item">콘텐츠가 긴 아이템입니다</div>
+              <div class="item">중간 길이</div>
+            </div>
+          </div>
+          <div class="kw-row">
+            <span class="kw-label">none<em>0 0 auto</em></span>
+            <div class="kw-demo kw-none">
+              <div class="item">짧음</div>
+              <div class="item">콘텐츠가 긴 아이템입니다</div>
+              <div class="item">중간 길이</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="resize-hint">넓혀 보세요 — initial/none은 안 커지고, 1은 균등하게, auto는 콘텐츠 비례로 커진다. 좁혀 보세요 — none만 안 줄어들어 가로 스크롤을 만든다</p>
+      <div class="callout blue">💡 <span>넓힐 때는 <strong>grow(1 vs auto vs 안 커짐)</strong> 차이가, 좁힐 때는 <strong>shrink(none만 고정)</strong> 차이가 드러난다. <code>flex: 1</code>과 <code>auto</code>의 차이는 넓힐 때 보인다 — 1은 균등, auto는 큰 콘텐츠가 계속 더 넓다.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 5. SHRINK ============ -->
+  <section id="shrink">
+    <h2><span class="no">5</span>flex-shrink — 아이콘이 찌그러지는 이유</h2>
+    <p class="desc">shrink 기본값이 <code>1</code>이라 공간이 모자라면 모든 아이템이 말없이 줄어든다. 컨테이너를 좁혀서 아바타를 찌그러뜨려 볼 것.</p>
+    <div class="panel">
+      <div class="toggle-wrap">
+        <input type="checkbox" id="shrinkToggle" />
+        <label for="shrinkToggle">아바타에 <code>flex-shrink: 0</code> 적용</label>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="flex-demo" id="shrinkDemo" style="gap: 10px; align-items: center; min-height: 90px;">
+          <div class="avatar">🙂</div>
+          <div class="chat-text">컨테이너가 좁아지면 이 텍스트와 아바타가 함께 줄어든다. shrink: 0을 켜면 아바타는 고정되고 텍스트만 줄어든다.</div>
+        </div>
+      </div>
+      <p class="resize-hint">좁혀 보세요 — 체크 전후의 아바타 모양을 비교</p>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">shrink 가중치 실험 — 줄어드는 양 ∝ shrink × basis</h3>
+      <div class="grow-controls" id="shrinkRatioControls">
+        <label class="grow-ctl"><span class="dot" style="background: var(--item-1)"></span>A (basis 200px) shrink:
+          <select data-idx="0"><option>0</option><option selected>1</option><option>2</option><option>3</option></select>
+        </label>
+        <label class="grow-ctl"><span class="dot" style="background: var(--item-2)"></span>B (basis 300px) shrink:
+          <select data-idx="1"><option>0</option><option>1</option><option selected>2</option><option>3</option></select>
+        </label>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="flex-demo" id="shrinkRatioDemo" style="gap: 8px; min-height: 90px;">
+          <div class="item" style="flex: 0 1 200px; min-width: 0; overflow: hidden;">A<span class="sub ratio-badge"></span></div>
+          <div class="item" style="flex: 0 2 300px; min-width: 0; overflow: hidden;">B<span class="sub ratio-badge"></span></div>
+        </div>
+      </div>
+      <p class="resize-hint">좁혀 보세요 — 아이템에 표시되는 실시간 너비로 B가 훨씬 많이 줄어드는 것을 확인 (shrink 2 × basis 300 → 가중치 600 vs A의 200)</p>
+      <pre class="code"><span class="comment">/* shrink는 비율에 basis를 곱한 가중치로 분배된다 */</span>
+줄어드는 양ᵢ = 부족분 × (shrinkᵢ × basisᵢ) / Σ(shrink × basis)
+
+<span class="comment">/* 예: 컨테이너 400px, A(basis 200, shrink 1), B(basis 300, shrink 2)
+   부족분 = 500 - 400 = 100,  가중치 A = 200, B = 600, 합 = 800
+   A: 100 × 200/800 = 25px 줄어듦 → 175px
+   B: 100 × 600/800 = 75px 줄어듦 → 225px   (검산 175 + 225 = 400 ✓) */</span></pre>
+      <div class="callout">⚠️ <span><strong>"shrink: 2 = 2배 빨리 줄어든다"는 틀린 직관.</strong> 정확히는 "같은 basis일 때 2배"다. 비율에 basis를 곱하는 이유: 순수 비율로만 줄이면 작은 아이템이 먼저 0에 도달해 사라지기 때문에, 큰 아이템이 더 많이 양보하도록 설계됐다.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 6. MIN-WIDTH TRAP ============ -->
+  <section id="minw">
+    <h2><span class="no">6</span>min-width/min-height: auto — flexbox 최대의 함정</h2>
+    <p class="desc">flex item의 <code>min-width</code> 기본값은 0이 아니라 <code>auto</code>(≈ 콘텐츠 최소 크기). 그래서 ellipsis가 안 먹고 컨테이너를 뚫는다.</p>
+    <div class="panel">
+      <div class="toggle-wrap">
+        <input type="checkbox" id="minwToggle" />
+        <label for="minwToggle">텍스트를 감싼 flex item(래퍼)에 <code>min-width: 0</code> 적용</label>
+      </div>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="trap-row trap-sync" id="minwDemo">
+          <span class="trap-label">URL</span>
+          <div class="trap-cell">
+            <span class="trap-value">https://platform.datumo.com/workspaces/42/applications/7/eval-runs/results?page=1&amp;filter=failed-only&amp;sort=score-desc</span>
+          </div>
+        </div>
+      </div>
+      <p class="resize-hint">좁혀 보세요 — 체크 전에는 텍스트가 컨테이너를 뚫고(가로 스크롤 발생), 체크 후에는 … 처리된다</p>
+      <pre class="code"><span class="comment">/* 실무에서 터지는 구조: 말줄임 요소가 flex item의 "자손"일 때 */</span>
+.row   { <span class="prop">display</span>: <span class="val">flex</span>; }
+.label { <span class="prop">flex-shrink</span>: <span class="val">0</span>; }
+.cell  { <span class="prop">min-width</span>: <span class="val">0</span>; }            <span class="comment">/* ★ 텍스트를 감싼 flex item — tw: min-w-0 */</span>
+.value { <span class="prop">overflow</span>: <span class="val">hidden</span>; <span class="prop">text-overflow</span>: <span class="val">ellipsis</span>; <span class="prop">white-space</span>: <span class="val">nowrap</span>; }</pre>
+      <div class="callout blue">🔍 <span>말줄임 요소가 <strong>곧 flex item 자신</strong>이면 min-width: 0 없이도 동작한다 — 자동 min-size는 스펙상 <code>overflow: visible</code>일 때만 적용되는데, 말줄임 세트의 overflow: hidden이 그 조건을 깨기 때문. 함정은 위처럼 <strong>중간에 overflow: visible인 flex item(래퍼)이 끼었을 때</strong> 터진다.</span></div>
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">같은 함정, 다른 증상 — 넘침의 모양은 "넘침을 받는 쪽"의 overflow가 정한다</h3>
+      <div class="compare">
+        <div>
+          <h3>overflow: visible (기본값) — 그냥 뚫고 나와 이웃을 덮는다</h3>
+          <div class="stage" data-label="overflow: visible" style="overflow: visible;">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 14px;">
+              <div class="trap-row trap-sync" style="flex: none; width: 250px; padding: 10px; border: 1px dashed var(--red); border-radius: 8px;">
+                <span class="trap-label">URL</span>
+                <div class="trap-cell"><span class="trap-value">https://platform.datumo.com/workspaces/42/applications/7/정eval-runs?page=1</span></div>
+              </div>
+              <div class="item" style="flex: 1; min-width: 0; font-size: 0.75rem;">이웃 콘텐츠 — 체크 전에는 URL이 내 위를 덮는다</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>overflow: hidden — 말줄임도 없이 소리 없이 잘린다</h3>
+          <div class="stage" data-label="overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 14px;">
+              <div class="trap-row trap-sync" style="flex: none; width: 250px; padding: 10px; border: 1px dashed var(--yellow); border-radius: 8px; overflow: hidden;">
+                <span class="trap-label">URL</span>
+                <div class="trap-cell"><span class="trap-value">https://platform.datumo.com/workspaces/42/applications/7/eval-runs?page=1</span></div>
+              </div>
+              <div class="item" style="flex: 1; min-width: 0; font-size: 0.75rem;">여기는 안 덮이지만, URL 꼬리는 … 표시도 없이 사라졌다</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout">⚠️ <span><strong>뚫림 자체는 세 데모 모두 동일하다</strong>(row가 min-content 아래로 못 줄어듦) — 증상의 모양만 넘침을 받는 조상의 <code>overflow</code>가 정한다. <code>visible</code>(기본값)이면 그냥 뚫고 나와 이웃 UI 위로 겹치고, <code>auto</code>면 위 데모처럼 가로 스크롤이 생기고, <code>hidden</code>이면 ellipsis도 없이 잘려서 <strong>가장 늦게 발견되는 버그</strong>가 된다. 위의 min-width: 0 토글 하나가 세 데모를 전부 고친다 — 어느 모양이든 처방은 같다는 뜻.</span></div>
+
+      <div class="callout red">🔥 <span>중첩 flex라면 <strong>조상 flex item 체인 전부</strong>에 min-w-0이 필요하다. column 방향에서는 같은 문제가 <code>min-height: auto</code>로 나타난다 — "스크롤 영역이 안 생겨요"의 원인. 아래에서 직접 재현.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">연계 함정 — column에서 min-height: auto가 스크롤을 막는다</h3>
+      <div class="toggle-wrap">
+        <input type="checkbox" id="scrollToggle" />
+        <label for="scrollToggle">main 영역(flex item)에 <code>min-height: 0</code> 적용</label>
+      </div>
+      <div class="scroll-vp" id="scrollDemo">
+        <div class="sv-bar">header (flex: none)</div>
+        <div class="scroll-outer">
+          <div class="scroll-inner">
+            <p>목록 1 — 체크 전: main의 min-height가 auto(= 콘텐츠 높이)라서 이 긴 목록이 main을 240px 밖으로 밀어낸다.</p>
+            <p>목록 2 — 내부 스크롤 영역의 height: 100%는 그 커진 main을 기준으로 잡혀서 스크롤바가 생기지 않는다.</p>
+            <p>목록 3 — 그 결과 footer는 뷰포트 밖으로 밀려나 잘려 보이지 않는다.</p>
+            <p>목록 4 — 체크 후: min-height: 0이 main을 남는 공간만큼으로 줄이고, 그제서야 overflow-y: auto가 동작한다.</p>
+            <p>목록 5 — footer가 다시 보이고 이 영역에 스크롤바가 생긴 것을 확인.</p>
+            <p>목록 6</p>
+            <p>목록 7</p>
+            <p>목록 8</p>
+            <p>목록 9</p>
+            <p>목록 10 — 끝.</p>
+          </div>
+        </div>
+        <div class="sv-bar footer-bar">footer (flex: none) — 내가 보이면 정상</div>
+      </div>
+      <pre class="code"><span class="comment">/* 고정 높이 column 레이아웃의 내부 스크롤 패턴 */</span>
+.page  { <span class="prop">display</span>: <span class="val">flex</span>; <span class="prop">flex-direction</span>: <span class="val">column</span>; <span class="prop">height</span>: <span class="val">100dvh</span>; }
+.main  { <span class="prop">flex</span>: <span class="val">1</span>; <span class="prop">min-height</span>: <span class="val">0</span>; }  <span class="comment">/* ★ 없으면 내부 스크롤이 안 생긴다 */</span>
+.inner { <span class="prop">height</span>: <span class="val">100%</span>; <span class="prop">overflow-y</span>: <span class="val">auto</span>; }</pre>
+      <div class="callout">⚠️ <span>스크롤 요소 자체(overflow: auto)는 스펙상 자동 min-size가 0이라 괜찮지만, 실무 버그는 대부분 <strong>스크롤 요소를 감싼 조상 flex item</strong>이 min-height: auto로 늘어나는 중첩 케이스다. Tailwind로는 그 조상에 <code>min-h-0</code>.</span></div>
+
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 24px 0 10px; font-family: Menlo, monospace;">번외 — h-full(height: 100%)이 조용히 무시되는 이유: 퍼센트는 "확정된 부모"가 필요하다</h3>
+      <pre class="code"><span class="comment">&lt;!-- 실전 사례: view 루트에 size-full을 줬는데 세로가 안 채워진다 --&gt;</span>
+&lt;html&gt;                                  <span class="comment">&lt;!-- height 미지정 --&gt;</span>
+  &lt;body&gt;                                <span class="comment">&lt;!-- height 미지정 → auto (콘텐츠만큼) --&gt;</span>
+    &lt;div class="<span class="val">flex size-full items-start</span>"&gt;        <span class="comment">&lt;!-- h-full = "auto의 100%" → 폴백, 무시 --&gt;</span>
+      &lt;div class="<span class="val">flex flex-100 flex-col self-stretch</span>"&gt;  <span class="comment">&lt;!-- 컨테이너가 콘텐츠만큼 → stretch 무력 --&gt;</span>
+        &lt;header&gt;…&lt;/header&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</pre>
+      <div class="compare">
+        <div>
+          <h3>① h-full — 부모가 auto라 무시</h3>
+          <div class="vp-sim">
+            <div class="sim-body" data-label="body (height 미지정 → auto)">
+              <div class="sim-view" style="height: 100%;" data-label="view · h-full → 콘텐츠만큼">
+                <div class="sim-header">header</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>② h-[150px] — 고정값은 부모 무관</h3>
+          <div class="vp-sim">
+            <div class="sim-body" data-label="body (height 미지정 → auto)">
+              <div class="sim-view" style="height: 150px;" data-label="view · h-[150px] → 그대로 적용">
+                <div class="sim-header">header</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>③ 체인 복구 — body h-full + view h-full</h3>
+          <div class="vp-sim">
+            <div class="sim-body" style="height: 100%;" data-label="body (height: 100% → 확정)">
+              <div class="sim-view" style="height: 100%;" data-label="view · h-full → 이제 채움">
+                <div class="sim-header">header</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout blue">💡 <span>퍼센트 height는 <strong>부모 height가 확정(definite)일 때만</strong> 해석된다 — 끊긴 지점부터는 조용히 auto로 폴백. 반면 <strong>width가 늘 꽉 차는 이유</strong>는 블록의 기본 width가 "부모를 꽉 채움"이고 뿌리(html)의 폭이 뷰포트로 항상 확정이라 참조가 끊기지 않기 때문. 실무 처방은 체인에 기대지 않는 것 — 화면 루트에 <code>h-dvh</code> 하나면 그 지점부터 확정 체인이 새로 시작된다.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 7. MARGIN AUTO ============ -->
+  <section id="mauto">
+    <h2><span class="no">7</span>margin: auto — 남는 공간을 전부 흡수</h2>
+    <p class="desc">justify-content로 표현하기 애매한 "이 아이템부터 오른쪽 끝으로"를 한 줄로 해결.</p>
+    <div class="panel">
+      <div class="toggle-wrap">
+        <input type="checkbox" id="mautoToggle" />
+        <label for="mautoToggle">Docs 메뉴에 <code>margin-left: auto</code> 적용</label>
+      </div>
+      <div class="stage" data-label="nav">
+        <div style="padding: 14px;">
+          <div class="nav-demo" id="mautoDemo">
+            <span class="logo">◆ Datumo</span>
+            <a href="#mauto">Workspace</a>
+            <a href="#mauto">Evaluation</a>
+            <a href="#mauto" class="push">Docs</a>
+            <a href="#mauto" class="cta">Sign in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. ORDER / REVERSE A11Y ============ -->
+  <section id="a11y">
+    <h2><span class="no">8</span>order · reverse — 시각 순서만 바뀌고 포커스는 못 따라온다</h2>
+    <p class="desc"><code>row-reverse</code>와 <code>order</code>는 <strong>그리는 순서만</strong> 바꾼다. Tab 포커스와 스크린 리더는 여전히 <strong>DOM 순서</strong>를 따라간다 — 직접 Tab을 눌러서 확인.</p>
+    <div class="panel">
+      <div class="controls">
+        <div class="control-row" id="a11yControls">
+          <span class="label">배치</span>
+          <button class="btn active" data-mode="normal">normal</button>
+          <button class="btn" data-mode="reverse">row-reverse</button>
+          <button class="btn" data-mode="order">1번에 order: 99</button>
+        </div>
+      </div>
+      <div class="stage" data-label="버튼 클릭 후 Tab ⇥">
+        <div class="a11y-demo" id="a11yDemo">
+          <button type="button" class="a11y-btn">1</button>
+          <button type="button" class="a11y-btn">2</button>
+          <button type="button" class="a11y-btn">3</button>
+          <button type="button" class="a11y-btn">4</button>
+        </div>
+      </div>
+      <div class="focus-log" id="focusLog">포커스 순서: (버튼 하나를 클릭한 뒤 Tab 키를 눌러보세요)</div>
+      <div class="callout red">♿ <span><strong>row-reverse에서 Tab을 누르면 포커스가 화면상 오른쪽 → 왼쪽으로 거꾸로 달린다.</strong> order: 99를 준 1번은 화면 맨 끝에 있는데 포커스는 가장 먼저 받는다. 스크린 리더 낭독 순서도 동일하게 DOM을 따른다. 시각 순서와 의미 순서가 달라졌다면 CSS가 아니라 <strong>DOM 순서 자체를 고치는 것</strong>이 정답 — order/reverse는 장식적·비인터랙티브 요소에만.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 9. PATTERNS ============ -->
+  <section id="patterns">
+    <h2><span class="no">9</span>실전 패턴 3종</h2>
+    <p class="desc">현업에서 매일 쓰는 조합.</p>
+    <div class="panel">
+      <div class="compare">
+        <div>
+          <h3>sticky footer — .main { flex: 1 }</h3>
+          <div class="mini-viewport">
+            <div class="mv-header">header (flex: none)</div>
+            <div class="mv-main">main (flex: 1)<br/>콘텐츠가 짧아도 footer는 바닥에 붙는다. 남는 세로 공간을 main이 전부 흡수하기 때문.</div>
+            <div class="mv-footer">footer (flex: none)</div>
+          </div>
+        </div>
+        <div>
+          <h3>고정 사이드바 + 유동 콘텐츠</h3>
+          <div class="sidebar-demo">
+            <div class="sb">sidebar<br/>flex: none<br/>width: 130px</div>
+            <div class="ct">content<br/>flex: 1 + <strong style="color: var(--red)">min-width: 0</strong><br/>— min-w-0이 없으면 내부의 긴 콘텐츠가 사이드바를 밀어낸다.</div>
+          </div>
+        </div>
+      </div>
+      <h3 style="font-size: 0.85rem; color: var(--text-dim); margin: 20px 0 8px; font-family: Menlo, monospace;">반응형 카드 랩 — flex: 1 1 160px (↔ 줄여 보세요)</h3>
+      <div class="stage resizable" data-label="↔ resize me">
+        <div class="cards-demo">
+          <div class="card">card</div>
+          <div class="card">card</div>
+          <div class="card">card</div>
+          <div class="card">card</div>
+          <div class="card">card</div>
+        </div>
+      </div>
+      <div class="callout">⚠️ <span>마지막 줄 카드가 혼자 늘어나는 게 flex wrap의 한계. 줄과 무관하게 너비를 맞추고 싶으면 Grid의 <code>repeat(auto-fill, minmax(160px, 1fr))</code>로 전환.</span></div>
+    </div>
+  </section>
+
+  <footer>Flexbox 딥다이브 세미나 · 빌드 없이 index.html을 브라우저로 열면 됩니다</footer>
+</main>
+
+<script>
+  const FACE_SRC = "data:image/svg+xml," + encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'>" +
+    "<circle cx='50' cy='50' r='48' fill='#5b8cff'/>" +
+    "<circle cx='35' cy='40' r='7' fill='#0c0e14'/><circle cx='65' cy='40' r='7' fill='#0c0e14'/>" +
+    "<path d='M30 62 Q50 80 70 62' stroke='#0c0e14' stroke-width='6' fill='none' stroke-linecap='round'/></svg>"
+  );
+  document.querySelectorAll("img.face").forEach((img) => { img.src = FACE_SRC; });
+
+  const axisDemo = document.getElementById("axisDemo");
+  const axisCode = document.getElementById("axisCode");
+  const axisState = {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+    gap: "8px",
+  };
+
+  const kebab = (s) => s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+
+  const renderAxis = () => {
+    Object.assign(axisDemo.style, axisState);
+    axisCode.innerHTML =
+      '<span class="prop">display</span>: <span class="val">flex</span>;\n' +
+      Object.entries(axisState)
+        .map(([k, v]) => '<span class="prop">' + kebab(k) + '</span>: <span class="val">' + v + "</span>;")
+        .join("\n");
+  };
+
+  document.getElementById("gcToggle").addEventListener("change", (e) => {
+    document.getElementById("gcDemo").classList.toggle("fixed", e.target.checked);
+  });
+
+  document.getElementById("axisControls").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn");
+    if (!btn) return;
+    const row = btn.closest(".control-row");
+    row.querySelectorAll(".btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    axisState[row.dataset.prop] = btn.dataset.val;
+    renderAxis();
+  });
+  renderAxis();
+
+  const wrapDemo = document.getElementById("wrapDemo");
+  document.getElementById("wrapControls").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn");
+    if (!btn) return;
+    document.querySelectorAll("#wrapControls .btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    wrapDemo.style.flexWrap = btn.dataset.val;
+  });
+
+  const growDemo = document.getElementById("growDemo");
+  const growItems = Array.from(growDemo.querySelectorAll(".item"));
+  const growCalc = document.getElementById("growCalc");
+  const growNames = ["A", "B", "C"];
+  const growState = [
+    { grow: 1, basis: 100 },
+    { grow: 2, basis: 200 },
+    { grow: 0, basis: 100 },
+  ];
+
+  const renderGrowCalc = () => {
+    const demoStyle = getComputedStyle(growDemo);
+    const available = growDemo.clientWidth
+      - parseFloat(demoStyle.paddingLeft) - parseFloat(demoStyle.paddingRight)
+      - parseFloat(demoStyle.columnGap) * (growItems.length - 1);
+    const basisSum = growState.reduce((sum, s) => sum + s.basis, 0);
+    const growSum = growState.reduce((sum, s) => sum + s.grow, 0);
+    const free = Math.round(available - basisSum);
+
+    let lines =
+      '<span class="comment">/* 실시간 계산 — 컨테이너 내부 폭(패딩·gap 제외) 기준 */</span>\n' +
+      'free space = ' + Math.round(available) + ' − Σbasis(' + basisSum + ') = <span class="val">' + free + 'px</span>\n';
+
+    if (free < 0) {
+      lines += '\n<span class="comment">/* free space가 음수 → grow가 아니라 shrink가 동작한다 (5번 섹션의 가중치 공식) */</span>';
+    } else if (growSum === 0) {
+      lines += '\n<span class="comment">/* Σgrow = 0 → 남는 공간을 아무도 가져가지 않는다 */</span>';
+    } else {
+      lines += growState.map((s, i) =>
+        growNames[i] + ' = ' + s.basis + ' + ' + free + ' × ' + s.grow + '/' + growSum +
+        ' = <span class="val">' + Math.round(s.basis + free * s.grow / growSum) + 'px</span>'
+      ).join('\n');
+    }
+    growCalc.innerHTML = lines;
+
+    growItems.forEach((item, i) => {
+      item.querySelector(".grow-badge").textContent =
+        "grow " + growState[i].grow + " · basis " + growState[i].basis +
+        " · 측정 " + Math.round(item.getBoundingClientRect().width) + "px";
+    });
+  };
+
+  const applyGrow = () => {
+    growItems.forEach((item, i) => {
+      item.style.flex = growState[i].grow + " 1 " + growState[i].basis + "px";
+    });
+    renderGrowCalc();
+  };
+
+  document.getElementById("growControls").addEventListener("change", (e) => {
+    const sel = e.target.closest("select");
+    if (!sel) return;
+    growState[Number(sel.dataset.idx)][sel.dataset.prop] = Number(sel.value);
+    applyGrow();
+  });
+  const growObserver = new ResizeObserver(renderGrowCalc);
+  growObserver.observe(growDemo);
+  growItems.forEach((item) => growObserver.observe(item));
+  applyGrow();
+
+  const adjustDemo = document.getElementById("adjustDemo");
+  const adjustItems = Array.from(adjustDemo.querySelectorAll(".item"));
+  const renderAdjustBadges = () => {
+    const flexLabel = adjustDemo.classList.contains("active") ? "flex: 1 1 120px" : "flex: 0 0 120px";
+    adjustItems.forEach((item) => {
+      item.querySelector(".adjust-flex").textContent = flexLabel;
+      item.querySelector(".adjust-badge").textContent =
+        "측정 " + Math.round(item.getBoundingClientRect().width) + "px";
+    });
+  };
+  document.getElementById("adjustToggle").addEventListener("change", (e) => {
+    adjustDemo.classList.toggle("active", e.target.checked);
+    renderAdjustBadges();
+  });
+  const adjustObserver = new ResizeObserver(renderAdjustBadges);
+  adjustItems.forEach((item) => adjustObserver.observe(item));
+  renderAdjustBadges();
+
+  const clampDemo = document.getElementById("clampDemo");
+  const clampItems = Array.from(clampDemo.querySelectorAll(".item"));
+  const renderClampBadges = () => {
+    clampItems.forEach((item) => {
+      item.querySelector(".clamp-badge").textContent =
+        "측정 " + Math.round(item.getBoundingClientRect().width) + "px";
+    });
+  };
+  document.getElementById("clampToggle").addEventListener("change", (e) => {
+    clampDemo.classList.toggle("capped", e.target.checked);
+    renderClampBadges();
+  });
+  const clampObserver = new ResizeObserver(renderClampBadges);
+  clampItems.forEach((item) => clampObserver.observe(item));
+  renderClampBadges();
+
+  document.getElementById("shrinkToggle").addEventListener("change", (e) => {
+    document.getElementById("shrinkDemo").classList.toggle("shrink-fixed", e.target.checked);
+  });
+
+  const ratioItems = Array.from(document.querySelectorAll("#shrinkRatioDemo .item"));
+  const renderRatioBadges = () => {
+    ratioItems.forEach((item) => {
+      const width = Math.round(item.getBoundingClientRect().width);
+      item.querySelector(".ratio-badge").textContent =
+        "shrink " + (item.style.flexShrink || "1") + " · " + width + "px";
+    });
+  };
+  document.getElementById("shrinkRatioControls").addEventListener("change", (e) => {
+    const sel = e.target.closest("select");
+    if (!sel) return;
+    ratioItems[Number(sel.dataset.idx)].style.flexShrink = sel.value;
+    renderRatioBadges();
+  });
+  const ratioObserver = new ResizeObserver(renderRatioBadges);
+  ratioItems.forEach((item) => ratioObserver.observe(item));
+  renderRatioBadges();
+
+  document.getElementById("minwToggle").addEventListener("change", (e) => {
+    document.querySelectorAll(".trap-sync").forEach((row) => {
+      row.classList.toggle("fixed", e.target.checked);
+    });
+  });
+
+  document.getElementById("scrollToggle").addEventListener("change", (e) => {
+    document.getElementById("scrollDemo").classList.toggle("fixed", e.target.checked);
+  });
+
+  document.getElementById("mautoToggle").addEventListener("change", (e) => {
+    document.getElementById("mautoDemo").classList.toggle("pushed", e.target.checked);
+  });
+
+  const a11yDemo = document.getElementById("a11yDemo");
+  const focusLog = document.getElementById("focusLog");
+  let focusSequence = [];
+  const resetFocusLog = () => {
+    focusSequence = [];
+    focusLog.textContent = "포커스 순서: (버튼 하나를 클릭한 뒤 Tab 키를 눌러보세요)";
+  };
+  a11yDemo.addEventListener("focusin", (e) => {
+    const btn = e.target.closest(".a11y-btn");
+    if (!btn) return;
+    if (focusSequence.length >= 8) focusSequence = [];
+    focusSequence.push(btn.textContent);
+    focusLog.innerHTML = '포커스 순서: <span class="seq">' + focusSequence.join(" → ") + "</span>";
+  });
+  document.getElementById("a11yControls").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn");
+    if (!btn) return;
+    document.querySelectorAll("#a11yControls .btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    a11yDemo.classList.toggle("reversed", btn.dataset.mode === "reverse");
+    a11yDemo.classList.toggle("ordered", btn.dataset.mode === "order");
+    resetFocusLog();
+  });
+</script>
+</body>
+</html>
